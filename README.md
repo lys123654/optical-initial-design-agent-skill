@@ -27,6 +27,8 @@ initial_review.md
 run_project_name.m
 ```
 
+也适用于遥感/高光谱前置望远镜这类一阶参数强约束的任务。此类任务应先把轨道高度、像元、GSD、幅宽转换成焦距、视场、狭缝长度和入瞳口径，再决定是 RC baseline、离轴 TMA、Korsch 还是其他多反结构。
+
 ## 能做到什么
 
 - 把用户指标整理成可执行的 `specs.json`。
@@ -107,6 +109,7 @@ C:\Users\<you>\.codex\skills\optical-initial-design-agent\SKILL.md
 - 专利中的折叠结构不能简单展开后就宣称忠实复现。
 - 将公开处方强行打开到更快光圈后，边缘光线异常并不意外。
 - ZMX 能打开不等于结构正确，必须检查 2D layout、first-order、spot/MTF 和约束表。
+- 遥感推扫高光谱系统要先核算焦距、视场和狭缝长度；RC/Cassegrain 只能作为快速反射式 baseline，正式宽视场前置望远镜应优先考虑离轴 TMA/Korsch。
 
 ## 后续软件 Agent 形态
 
