@@ -1,0 +1,90 @@
+{
+  "project": {
+    "name": "example_initial_design",
+    "description": "Initial optical design seed from public prescriptions or patents",
+    "stage": "requirements_intake"
+  },
+  "target_spec": {
+    "effective_focal_length_mm": {
+      "target": null,
+      "tolerance_or_range": null,
+      "priority": "high"
+    },
+    "f_number": {
+      "target": null,
+      "maximum_allowed": null,
+      "priority": "high"
+    },
+    "image_circle_diameter_mm": {
+      "target": null,
+      "minimum_allowed": null,
+      "priority": "high"
+    },
+    "field_definition": {
+      "type": "angle | image_height | object_height | sensor",
+      "values": []
+    },
+    "total_track_length_mm": {
+      "maximum_allowed": null,
+      "priority": "medium"
+    },
+    "back_focal_length_mm": {
+      "minimum_allowed": null,
+      "includes_cover_glass": true,
+      "priority": "medium"
+    },
+    "wavelengths_um": {
+      "values": [],
+      "weights": []
+    },
+    "chief_ray_angle_deg": {
+      "target_range": null,
+      "priority": "optional"
+    },
+    "relative_illumination_percent": {
+      "minimum_allowed": null,
+      "priority": "optional"
+    },
+    "distortion_abs_percent": {
+      "maximum_allowed": null,
+      "priority": "optional"
+    }
+  },
+  "structure_constraints": {
+    "lens_element_count": {
+      "allowed_range": null
+    },
+    "glass_asphere_limit": {
+      "max_surfaces": null
+    },
+    "plastic_asphere_limit": {
+      "max_surfaces": null
+    },
+    "cemented_groups": {
+      "allowed": true,
+      "preference": "avoid_too_many"
+    },
+    "folded_or_reflective_geometry": {
+      "allowed": false,
+      "notes": ""
+    },
+    "cover_glass": {
+      "required": true,
+      "thickness_mm": 0.3,
+      "material": "model_glass_or_catalog_glass"
+    }
+  },
+  "candidate_source_priority": [
+    "public prescription libraries",
+    "public design examples",
+    "patents"
+  ],
+  "zemax_output": {
+    "format_preference": [".zmx", ".zos"],
+    "run_quick_focus": true,
+    "run_spot": true,
+    "run_mtf": true,
+    "open_after_build": false
+  }
+}
+

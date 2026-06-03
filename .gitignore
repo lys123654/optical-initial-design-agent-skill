@@ -1,0 +1,15 @@
+*.asv
+*.autosave
+*.tmp
+*.log
+*.ZDA
+*.zda
+analysis_outputs/
+zemax/*.ZDA
+zemax/*.zda
+zemax/*_unfocused.zmx
+_probe*
+probe_*
+.DS_Store
+Thumbs.db
+
