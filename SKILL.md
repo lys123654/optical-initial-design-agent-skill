@@ -43,14 +43,6 @@ For microscope objectives and other modular systems, also clarify the boundary o
 - How field is specified. For an infinity-corrected microscope, a 20 mm image circle belongs to the tube-lens image plane; convert it to objective-side field angle or object height only after the tube-lens focal length is defined.
 - How working distance is defined. Surgical microscope and long-working-distance objective patents often report the object-side air space; do not confuse it with back focal length in the printed prescription direction.
 
-For remote-sensing or pushbroom hyperspectral systems, clarify the fore-optics boundary before searching:
-
-- Whether the task is only the fore telescope or the full telescope-plus-spectrometer chain.
-- Pixel pitch, GSD, orbit altitude, and whether the swath is one-pass optical coverage or a later scanning/mosaicking target.
-- Whether the image plane is a detector, a slit, an intermediate image, or a relay into a spectrometer.
-- Spectral range: visible, VNIR, SWIR, MWIR, LWIR, or mixed bands. This strongly affects reflective versus refractive architecture.
-- Whether the user needs slit telecentricity, distortion, smile/keystone limits, relative illumination, stray-light constraints, or only a first Zemax starting structure.
-
 ### 2. Search Candidate Sources
 
 Search in this order unless the user asks otherwise:
@@ -68,13 +60,6 @@ For patent or library screening, rank candidates by application match first, the
 - If the target working distance is approximate, choose the closest real prescription in the correct application class instead of forcing an unrelated patent to the requested WD.
 - Keep original-scale reproduction separate from scaled or optimized variants. Name files so it is obvious whether they are `original`, `scaled`, `reversed`, `paraxial_scaffold`, or `optimized`.
 - Do not use an unrelated patent only because its focal length ratio is convenient. A weak application match should be rejected even if it can be scaled numerically.
-
-For remote-sensing fore telescopes:
-
-- Prefer sources that explicitly match the architecture class: TMA, Korsch, four-mirror anastigmat, RC/Cassegrain, Dyson/Offner, or pushbroom hyperspectral fore optics.
-- For large swath and long EFL, prefer off-axis TMA/Korsch-family sources over on-axis RC unless the user only wants a rough comparison baseline.
-- Public examples may provide enough geometry to build a Zemax file but not enough for performance. If freeform/polynomial coefficients are missing or not mapped, label the file as a geometry seed.
-- A slower but complete published TMA prescription is often a better starting point than a faster but incomplete patent claim.
 
 ### 3. Audit Candidate Prescriptions
 
@@ -102,14 +87,6 @@ Minimum numerical audit before Zemax entry:
 - Compare reported EFL, BFL, WD, and total track against the matrix result in the same propagation direction. If they disagree, consider reversed use, sign convention, or a missing surface before modifying the prescription.
 - Confirm glass names and basic Nd/Vd values against the local catalog when available. If using model glass, say so explicitly.
 
-Remote-sensing first-order audit:
-
-- Compute effective focal length from `EFL = orbit_altitude * pixel_pitch / GSD`, with consistent units.
-- Compute required full field from swath and altitude: `full_fov = 2 * atan((swath / 2) / altitude)`.
-- Compute focal-plane slit length from `slit_length = 2 * EFL * tan(full_fov / 2)`.
-- Compute aperture from `EPD = EFL / F_number`. If a near-F/2 target implies a very large aperture, report it before building.
-- If the implied slit length is unusually large, reduce the seed field for first inspection only after documenting the original requirement and the reduced seed field.
-
 ### 4. Convert To Zemax
 
 Use ZOS-API through MATLAB, Python, or C# depending on the user's environment. Follow these rules:
@@ -122,8 +99,6 @@ Use ZOS-API through MATLAB, Python, or C# depending on the user's environment. F
 - For model glass, write Nd/Vd values explicitly and note that this is not catalog glass matching.
 - For folded systems, either model coordinate breaks and mirrors explicitly or label the model as an unfolded approximation.
 - Preserve all intentional deviations from the source prescription in the report.
-- For mirror systems, use coordinate breaks and mirror materials explicitly. Record coordinate-break sign conventions and verify the layout visually.
-- For off-axis TMA/Korsch systems, do not drop decenter/tilt data. If the source includes polynomial, Forbes, XY polynomial, or freeform coefficients, either map them to an appropriate Zemax surface type or state that only the base geometry was reproduced.
 
 Field-setting rules:
 
@@ -206,17 +181,6 @@ When a source contains inconsistencies, state them plainly. For example, if a pa
 - Report angular magnification, entrance/exit pupil, eye relief or relay pupil position.
 - A finite image plane may be a test plane only; do not over-focus an afocal design unless an eyepiece or detector objective is included.
 
-### Remote-Sensing Pushbroom / Hyperspectral Fore Telescope
-
-- Treat the fore telescope as a subsystem feeding a slit or intermediate image unless the full spectrometer is explicitly included.
-- Convert GSD/pixel/orbit into EFL before searching. This first-order result often dominates all later architecture choices.
-- Convert swath into full FOV and focal-plane slit length before promising a single-instrument design.
-- If one-pass swath implies an impractically long slit, create a reduced-field seed only as a documented first inspection model; keep the original swath in `specs.json`.
-- RC/Cassegrain can be useful as a quick reflective baseline, but it should not be treated as the final architecture for wide-field high-spectral fore optics.
-- Off-axis TMA or Korsch-family designs are usually stronger starting points for wide field, unobscured pupil, and reflective broadband performance.
-- A public TMA prescription with F/10-F/12 can be a useful parent even if the user wants a faster F-number; label the F-number gap and plan a later redesign/optimization.
-- Add slit telecentricity, distortion, smile/keystone, relative illumination, and stray-light checks as soon as the geometric seed is stable.
-
 ### Folded, Prism, or Mirror Systems
 
 - Preserve coordinate breaks, mirror signs, prism materials, and unfolded/folded interpretation separately.
@@ -274,10 +238,6 @@ Ask for user review before:
 - Scaling asphere coefficients with the wrong powers.
 - Ignoring coordinate breaks or folded optical paths in patent examples.
 - Reporting "Zemax opens" as proof that the structure is correct.
-- Treating an on-axis RC/Cassegrain baseline as a final wide-swath hyperspectral fore telescope.
-- Reducing a large swath for first inspection without documenting the original swath and the implied slit length.
-- Importing an off-axis TMA source while dropping decenter/tilt or freeform coefficients without labeling it as a partial reproduction.
-- Reporting mirror-system spot/MTF numbers before visually checking coordinate-break signs and ray path.
 - Leaving a microscope objective at only 0-degree field when the user specified an image circle through a tube lens.
 - Treating a paraxial tube lens as permission to use a paraxial objective.
 - Treating patent working distance as BFL without checking propagation direction.
