@@ -1,18 +1,18 @@
-# Example: DJI-Style Compact Telephoto Seed
+# Example: Compact Telephoto Seed
 
 This example shows the type of input this skill is designed for.
 
 ## Requirement
 
 ```text
-EFL: 74 mm
-F-number: F2.8
-Image circle: 16 mm
-TTL: <55.5 mm
-BFL: >6 mm, including 0.3 mm cover glass
-Lens count: 5-15
+EFL: medium-to-long focal length
+F-number: fast imaging lens class
+Image circle: large sensor class
+TTL: constrained compact package
+BFL: constrained detector package, including cover glass
+Lens count: user-defined practical range
 Field definition: angle or image circle
-Wavelengths: 435/486/546/587/656 nm plus 850 nm review
+Wavelengths: user-defined visible or multispectral bands
 ```
 
 ## Lessons From MVP
@@ -33,4 +33,3 @@ dji_style_telephoto/
   analysis_outputs/
   initial_review.md
 ```
-

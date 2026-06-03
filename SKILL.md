@@ -138,7 +138,7 @@ Ask for user review before:
 - Adding stop or field-stop rows as extra distances instead of splitting adjacent air gaps.
 - Letting Quick Focus change the cover-glass thickness.
 - Forgetting automatic semi-diameter solves, causing misleading 2D layouts.
-- Opening a patent F/3 design to F/2.8 and assuming it remains valid.
+- Opening a source design to a faster F-number and assuming it remains valid.
 - Scaling asphere coefficients with the wrong powers.
 - Ignoring coordinate breaks or folded optical paths in patent examples.
 - Reporting "Zemax opens" as proof that the structure is correct.
@@ -146,4 +146,3 @@ Ask for user review before:
 ## Relationship To Other Tools
 
 General Zemax guidance skills can help with optimization, analysis selection, and tolerancing. They do not replace the source-search, patent-audit, and prescription-to-Zemax workflow in this skill.
-

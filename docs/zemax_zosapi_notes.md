@@ -31,7 +31,7 @@ surface.SemiDiameterCell.SetSolveData(solver);
 Use two surfaces:
 
 ```text
-cover front: thickness = 0.3 mm, material = cover glass
+cover front: thickness = project-defined cover-glass thickness, material = cover glass
 cover back: thickness = focus air, material = air
 image plane
 ```
@@ -68,4 +68,3 @@ A10' = A10 / s^9
 ## Quick Focus
 
 Quick Focus is useful for a first pass, but it is not optimization. Always report what thickness changed.
-

@@ -9,8 +9,9 @@
 典型输入：
 
 ```text
-我要一个 74 mm、F2.8、16 mm 像圆、总长 <55.5 mm、后焦 >6 mm 的短总长长焦镜头，
-允许 5-15 片，允许少量玻璃非球面，要求加 0.3 mm 保护玻璃。
+我要一个中长焦、大像面、短总长的成像镜头初始结构，
+光圈接近快速成像镜头水平，总长和后焦有明确包装约束，
+允许若干片玻璃/塑料镜片和少量非球面，并需要加入指定厚度的保护玻璃。
 请先从处方库找，没有再搜专利，审查后写入 Zemax。
 ```
 
@@ -47,36 +48,25 @@ run_project_name.m
 - 不能把折叠系统简单展开后就当成完整真实结构。
 - 不能在没有 Zemax 许可证和 ZOS-API 环境时生成真实 `.zmx`。
 
-## 和 `zemax-optical-designer` 的关系
-
-公开可见的 `zemax-optical-designer` skill 更像一个通用 Zemax 设计顾问，覆盖顺序光线追迹、MTF/PSF、优化、容差和杂散光分析。它对后续优化阶段可能有参考价值，尤其是：
-
-- Zemax 分析类型选择；
-- merit function 设计；
-- 公差分析；
-- stray light 或非序列分析；
-- Zemax 操作经验提醒。
-
-但它不是本 skill 的替代品。当前 skill 的核心价值是：
-
-```text
-指标输入 -> 处方库/专利检索 -> 候选审查 -> Zemax 初始结构生成 -> Quick Focus -> 初步报告
-```
-
-也就是说，`zemax-optical-designer` 可以作为后续“优化和分析顾问”，而这个 skill 是“从零找到并搭出初始结构”的工作流。
-
 ## 安装到 Codex
 
-如果你把本目录上传到了 GitHub，可以在支持 skill 安装的环境中安装：
+推荐安装到 Codex 全局 skill 目录，这样所有项目都能使用：
 
 ```powershell
-npx add-skill https://github.com/<your-name>/<your-repo>
+npx skills add lys123654/optical-initial-design-agent-skill -g -y
 ```
 
-如果仓库根目录不是 skill 根目录，需要指定子目录：
+如果仓库是私有仓库，先确认本机已经登录 GitHub：
 
 ```powershell
-npx add-skill https://github.com/<your-name>/<your-repo> --path optical-initial-design-agent-skill
+gh auth status
+```
+
+如果 CLI 安装因为私有仓库权限或网络代理失败，可以手动安装：
+
+```powershell
+git clone https://github.com/lys123654/optical-initial-design-agent-skill.git `
+  "$env:USERPROFILE\.codex\skills\optical-initial-design-agent"
 ```
 
 也可以直接把本目录复制到：
@@ -85,18 +75,15 @@ npx add-skill https://github.com/<your-name>/<your-repo> --path optical-initial-
 C:\Users\<you>\.codex\skills\optical-initial-design-agent
 ```
 
-## 推荐仓库结构
+安装后确认这个文件存在：
 
 ```text
-optical-initial-design-agent-skill/
-  SKILL.md
-  README.md
-  templates/
-  scripts/
-  docs/
-  examples/
-  .gitignore
+C:\Users\<you>\.codex\skills\optical-initial-design-agent\SKILL.md
 ```
+
+重新打开 Codex 后，就可以在相关任务中触发这个 skill。
+
+## 推荐仓库结构
 
 ## 使用流程
 
@@ -111,14 +98,14 @@ optical-initial-design-agent-skill/
 
 ## 当前 MVP 经验
 
-这个 skill 来自一次 DJI 风格长焦大底短总长镜头 starting-point MVP。已验证的关键经验包括：
+这个 skill 来自一次中长焦大像面短总长镜头 starting-point MVP。已验证的关键经验包括：
 
 - Optical Bench 处方中的口径列可能是直径，不一定是 Zemax semi-diameter。
 - AS/FS 行通常要切分前一个空气间隔，而不是无脑插入额外距离。
 - 保护玻璃必须用前后两个面建模，否则 Quick Focus 可能改掉玻璃厚度。
 - 非 stop、非 image 面建议使用自动净口径求解。
 - 专利中的折叠结构不能简单展开后就宣称忠实复现。
-- F/3 专利打开到 F/2.8 后边缘光线异常并不意外。
+- 将公开处方强行打开到更快光圈后，边缘光线异常并不意外。
 - ZMX 能打开不等于结构正确，必须检查 2D layout、first-order、spot/MTF 和约束表。
 
 ## 后续软件 Agent 形态
@@ -137,4 +124,3 @@ optical-initial-design-agent-skill/
 ```
 
 建议先保持“半自动 + 人工审查节点”，等候选审查和 Zemax 写入稳定后，再逐步提高自动化程度。
-

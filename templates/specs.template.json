@@ -70,7 +70,7 @@
     },
     "cover_glass": {
       "required": true,
-      "thickness_mm": 0.3,
+      "thickness_mm": null,
       "material": "model_glass_or_catalog_glass"
     }
   },
@@ -87,4 +87,3 @@
     "open_after_build": false
   }
 }
-
