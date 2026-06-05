@@ -61,6 +61,57 @@ For patent or library screening, rank candidates by application match first, the
 - Keep original-scale reproduction separate from scaled or optimized variants. Name files so it is obvious whether they are `original`, `scaled`, `reversed`, `paraxial_scaffold`, or `optimized`.
 - Do not use an unrelated patent only because its focal length ratio is convenient. A weak application match should be rejected even if it can be scaled numerically.
 
+### 2a. Ratio-Based Screening (Tier 1 Quick Filter)
+
+Before extracting full prescription data, screen candidates by dimensionless ratios computed from claimed or estimated values. This is fast, needs no API calls, and eliminates clearly incompatible candidates early.
+
+Compute these ratios for each candidate:
+
+| Ratio | Formula | Meaning | Typical tight target |
+|---|---|---|---|
+| TTL/f | TotalTrackLength / EFL | Compactness | <0.75 (telephoto), <1.0 (standard) |
+| BFL/f | BackFocalLength / EFL | Detector packaging | >0.08 (typical camera) |
+| WD/f | WorkingDistance / EFL | Microscope working distance | 0.80–1.05 (objective) |
+| IH/f | ImageSemiHeight / EFL | Field of view proxy | = tan(half_FOV) |
+| EP/f | EntrancePupil / EFL | F-number proxy | = 1/(2×F#) |
+| Σt/f | SumGlassThickness / EFL | Element-count proxy | Application-specific |
+
+Candidates that pass ratio screening proceed to Tier 2 (extraction and ABCD check). Candidates that fail ALL relaxed ratio bounds are rejected without full extraction. Record ratios in the candidate audit for traceability.
+
+### 2b. Search Query Templates
+
+Generate search queries systematically from specs.json. Use multiple query templates and multiple search engines in parallel when possible.
+
+**Patent search templates (English):**
+- `"focal length [EFL]mm F/[F#]" lens patent embodiment`
+- `"compact telephoto [TTL/f target] TTL/f patent" lens optical system`
+- `"[application] lens [EFL]mm patent radius thickness"`
+- `"optical system" "f=[EFL]" "Fno=[F#]" patent numerical example`
+
+**Patent search templates (Chinese):**
+- `[EFL]mm [F#] 镜头 光学系统 专利 实施例`
+- `短总长 长焦镜头 [EFL]mm 光学专利`
+- `光学系统 曲率半径 厚度 阿贝数 [EFL]mm`
+
+**Engine fallback order:**
+1. Google Patents (English keywords)
+2. Espacenet (advanced search, CPC/IPC classes)
+3. The Lens (fielded search, patent families)
+4. Google Patents (Chinese keywords for CNIPA patents)
+5. Broader web search for prescription reproductions
+
+**Integration with deep-research:** When available, invoke a deep-research skill to fan out across patent databases with the candidate criteria. Pass it a structured brief: `{target_spec, ratio_bounds, application_class, rejection_criteria}`. Do not rely on general web search alone.
+
+### 2c. Multi-Tier Screening
+
+Structure candidate evaluation in three explicit tiers:
+
+- **Tier 1 (Ratio Screen):** Compute dimensionless ratios from claimed/reported values. Fast, no extraction needed. Gate: keep candidates passing ≥60% of applicable ratios.
+- **Tier 2 (ABCD + Numerical Audit):** Run paraxial ABCD or first-order estimate. Check reported vs. computed EFL, BFL, TTL for consistency (±15%). Gate: keep candidates where computed values are internally consistent.
+- **Tier 3 (Full Entry):** Complete surface-by-surface prescription extraction, glass substitution check (see 3a), Zemax build, Quick Focus, and full analysis suite.
+
+Only escalate to the next tier when a candidate passes the current tier.
+
 ### 3. Audit Candidate Prescriptions
 
 For each serious candidate, create a candidate audit note. Check:
@@ -87,9 +138,44 @@ Minimum numerical audit before Zemax entry:
 - Compare reported EFL, BFL, WD, and total track against the matrix result in the same propagation direction. If they disagree, consider reversed use, sign convention, or a missing surface before modifying the prescription.
 - Confirm glass names and basic Nd/Vd values against the local catalog when available. If using model glass, say so explicitly.
 
+### 3a. Glass Substitution Check
+
+Before building the Zemax file, replace model glass (Nd/Vd only) with real catalog glass from the user's glass library. Run the AGF glass matcher (`optical_glass_tools`) against the local catalogs (CDGM, HOYA, PLASTIC) for each material surface in the candidate prescription.
+
+**Matching tolerance levels:**
+- **Exact match:** Nd difference <0.001 AND Vd difference <0.1 → use catalog glass directly. Mark as `exact`.
+- **Close match:** distance <0.05 (weighted) → use catalog glass, note the substitution in the intentional-deviations table. Mark as `close`.
+- **Approximate match:** distance 0.05–0.20 → present top-3 candidates to user for review before committing. Mark as `approximate`.
+- **No match:** distance >0.20 → keep model glass, flag as high-risk. Note that the prescription may depend on unobtainable materials.
+
+**Substitution rules:**
+1. Prefer CDGM over HOYA over PLASTIC unless the user specifies otherwise. CDGM is the primary catalog for most Chinese optical design work.
+2. Within the same catalog, prefer `is_preferred` (availability=1) glasses over standard ones.
+3. When multiple glasses have similar distance, prefer lower relative cost.
+4. Document every substitution in the intentional-deviations table with: source Nd/Vd, matched glass name, catalog, distance, and tolerance level.
+5. If the candidate prescription explicitly names a glass (e.g., "N-BK7", "H-FK61"), verify the name exists in the catalog and use the catalog Nd/Vd values, not the patent's printed values.
+
+**Tool invocation:**
+```bash
+python -m optical_glass_tools match --library glass_library.json --nd 1.51680 --vd 64.2 --top 3
+```
+
+For bulk matching of an entire prescription:
+```python
+from optical_glass_tools.glass_library import GlassLibrary
+lib = GlassLibrary.load("glass_library.json")
+for nd, vd, surface_label in prescription:
+    matches = lib.match(nd=nd, vd=vd, top_n=3)
+    # Report best match, tolerance level, and alternatives
+```
+
+Generate a `glass_substitution_report.md` with one row per surface showing: surface label, source Nd/Vd, matched glass, catalog, Nd/Vd diff, distance, tolerance level, and alternatives.
+
 ### 4. Convert To Zemax
 
-Use ZOS-API through MATLAB, Python, or C# depending on the user's environment. Follow these rules:
+Use ZOS-API through MATLAB, Python, or MCP depending on the user's environment. **Before editing ZMX files or calling ZOS-API, consult `ZEMAX_OPS.md` for file format details, GLAS line conventions, and common pitfalls.**
+
+Follow these rules:
 
 - Use a two-surface cover glass or filter so Quick Focus adjusts the air gap after the glass, not the glass thickness.
 - Set non-stop, non-image surface semi-diameters to Automatic solve when the initial aperture data is uncertain.
@@ -138,14 +224,26 @@ Write a Markdown report with:
 
 - Source candidate and provenance links.
 - Requirement pass/fail table.
+- **Constraint relaxation analysis:** When no candidate passes all strict requirements, apply the `constraint_relaxation_protocol.md` protocol. Produce a weighted score for each candidate: `score = Σ(w_i × pass_i)` where `w_i` = priority weight (hard=1000, high=100, medium=10, low=1). Present a compromise ranking table showing which candidate is the "least bad" option and what was relaxed.
 - Conversion assumptions.
 - Known deviations from source prescription.
+- **Glass substitution table:** Show every material surface with source Nd/Vd, matched catalog glass, distance, and tolerance level.
 - 2D layout and ray-path sanity observations.
 - EFL, F-number intent, image circle, TTL, BFL, lens count.
 - Spot/MTF summary, with warning if the result is only a rough first pass.
-- Explicit next steps: original-scale reproduction, scaled reproduction, optimization, glass matching, folded-geometry modeling, or merit-function setup.
+- Explicit next steps: original-scale reproduction, scaled reproduction, optimization, glass matching refinement, folded-geometry modeling, or merit-function setup.
 
-When a source contains inconsistencies, state them plainly. For example, if a patent's printed `R1/f` fails its own stated range but the object-side surface satisfies it, report this as a surface-order or wording ambiguity rather than "fixing" the table silently.
+**Default constraint relaxation order** (user may override):
+1. Relax F/# first (e.g., F/2.8 → F/3.5 → F/4.0)
+2. Relax packaging constraints: TTL → BFL
+3. Relax optical performance: EFL tolerance, image circle
+4. Relax structural constraints: lens count, asphere count, cemented groups
+5. Relax application match: accept similar application class as proxy
+
+When no candidate passes at the strict level:
+- Run the relaxation protocol and produce a compromise table.
+- Flag the best-scoring candidate(s) for user review before Zemax entry.
+- Never silently accept a candidate that fails a hard constraint.
 
 ## Lens-Type Notes
 
@@ -204,6 +302,8 @@ project_name/
   candidate_audits/
     candidate_01.md
     candidate_02.md
+  glass_substitution_report.md
+  constraint_relaxation_analysis.md
   zemax/
     project_name_focused.zmx
     project_name_focused.ZDA
@@ -243,6 +343,11 @@ Ask for user review before:
 - Treating patent working distance as BFL without checking propagation direction.
 - Trusting patent prose when a simple ratio check contradicts the prescription table.
 - Combining original reproduction, reverse-use interpretation, scaling, and optimization into one file without labels.
+- Using model glass when a good catalog match exists within distance <0.05.
+- Matching glass by Nd only, ignoring Vd — this breaks chromatic correction.
+- Accepting a "best match" without checking whether the glass status (preferred vs. discontinued) matters for the project.
+- Relaxing constraints without documenting what was relaxed and by how much.
+- Presenting the first compromise candidate as "the" solution instead of showing the trade-off table.
 
 ## Relationship To Other Tools
 

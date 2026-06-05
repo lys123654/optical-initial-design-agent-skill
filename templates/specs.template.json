@@ -2,67 +2,107 @@
   "project": {
     "name": "example_initial_design",
     "description": "Initial optical design seed from public prescriptions or patents",
-    "stage": "requirements_intake"
+    "stage": "requirements_intake",
+    "application_class": "telephoto | wide_angle | microscope_objective | telescope | relay | other"
   },
   "target_spec": {
     "effective_focal_length_mm": {
       "target": null,
       "tolerance_or_range": null,
+      "relaxation_steps": [1.05, 1.10, 1.20],
       "priority": "high"
     },
     "f_number": {
       "target": null,
       "maximum_allowed": null,
+      "relaxation_steps": [1.25, 1.43, 1.60],
       "priority": "high"
     },
     "image_circle_diameter_mm": {
       "target": null,
       "minimum_allowed": null,
+      "fallback_minimum": null,
       "priority": "high"
     },
     "field_definition": {
       "type": "angle | image_height | object_height | sensor",
-      "values": []
+      "values": [],
+      "notes": ""
     },
     "total_track_length_mm": {
       "maximum_allowed": null,
+      "relaxed_maximum": null,
       "priority": "medium"
     },
     "back_focal_length_mm": {
       "minimum_allowed": null,
       "includes_cover_glass": true,
+      "relaxed_minimum": null,
       "priority": "medium"
     },
     "wavelengths_um": {
       "values": [],
-      "weights": []
+      "weights": [],
+      "notes": ""
     },
     "chief_ray_angle_deg": {
       "target_range": null,
-      "priority": "optional"
+      "priority": "low"
     },
     "relative_illumination_percent": {
       "minimum_allowed": null,
-      "priority": "optional"
+      "priority": "low"
     },
     "distortion_abs_percent": {
       "maximum_allowed": null,
-      "priority": "optional"
+      "priority": "low"
+    }
+  },
+  "ratio_targets": {
+    "_comment": "Dimensionless ratios for Tier 1 candidate screening. Leave null to skip.",
+    "ttl_over_f": {
+      "tight": null,
+      "relaxed": null,
+      "notes": "Compactness target. Telephoto <0.75, standard <1.0"
+    },
+    "bfl_over_f": {
+      "minimum": null,
+      "notes": "Detector packaging. Typical >0.08"
+    },
+    "wd_over_f": {
+      "tight": null,
+      "relaxed": null,
+      "notes": "Working distance ratio. Microscope typically 0.8-1.05"
+    },
+    "ih_over_f": {
+      "target": null,
+      "notes": "Field of view proxy = tan(half_FOV). e.g., tan(6.17°) = 0.108"
+    },
+    "ep_over_f": {
+      "target": null,
+      "notes": "F-number proxy = 1/(2×F#). e.g., 1/5.6 = 0.179"
     }
   },
   "structure_constraints": {
     "lens_element_count": {
-      "allowed_range": null
+      "allowed_range": null,
+      "relaxed_range": null,
+      "priority": "medium"
     },
     "glass_asphere_limit": {
-      "max_surfaces": null
+      "max_surfaces": null,
+      "relaxed_max": null,
+      "priority": "medium"
     },
     "plastic_asphere_limit": {
-      "max_surfaces": null
+      "max_surfaces": null,
+      "priority": "low"
     },
     "cemented_groups": {
       "allowed": true,
-      "preference": "avoid_too_many"
+      "max_count": null,
+      "preference": "avoid_too_many",
+      "priority": "low"
     },
     "folded_or_reflective_geometry": {
       "allowed": false,
@@ -74,16 +114,31 @@
       "material": "model_glass_or_catalog_glass"
     }
   },
+  "glass_library": {
+    "_comment": "Paths to local AGF glass catalog files for material matching.",
+    "agf_directory": null,
+    "primary_catalog": "CDGM",
+    "secondary_catalogs": ["HOYA", "PLASTIC"],
+    "model_glass_fallback": "allowed"
+  },
+  "constraint_relaxation_priority": {
+    "_comment": "Order in which to relax constraints when no candidate passes all.",
+    "order": ["f_number", "packaging", "optical_performance", "structural", "application_match"],
+    "notes": "Default order per user preference: relax F/# first before touching TTL/BFL."
+  },
   "candidate_source_priority": [
-    "public prescription libraries",
-    "public design examples",
-    "patents"
+    "public prescription libraries (Optical Bench Hub, Lens-Designs.com)",
+    "glass catalog starting-point databases",
+    "public design examples and textbooks",
+    "patent databases (Google Patents, Espacenet, The Lens)"
   ],
   "zemax_output": {
     "format_preference": [".zmx", ".zos"],
     "run_quick_focus": true,
     "run_spot": true,
     "run_mtf": true,
-    "open_after_build": false
+    "open_after_build": false,
+    "use_catalog_glass": true,
+    "catalog_glass_directory": null
   }
 }

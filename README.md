@@ -32,8 +32,11 @@ run_project_name.m
 - 把用户指标整理成可执行的 `specs.json`。
 - 自动或半自动生成检索关键词。
 - 优先查公开处方库，再查专利。
+- 先用无量纲比例做快速筛选，例如 `TTL/f`、`BFL/f`、`IH/f`、`EP/f`。
 - 对候选结构做数值审查。
 - 检查专利表格中的曲率、厚度、材料、非球面项、视场、TTL/BFL。
+- 根据用户提供的 AGF/玻璃库，将只有 `Nd/Vd` 的模型玻璃匹配到真实目录玻璃。
+- 当严格指标找不到候选时，按优先级给出可审查的约束放宽方案，而不是静默降低要求。
 - 用 MATLAB/Python/C# 的 ZOS-API 写入 Zemax LDE。
 - 加入保护玻璃、波长、视场、光阑、自动净口径。
 - 执行 Quick Focus。
@@ -85,16 +88,38 @@ C:\Users\<you>\.codex\skills\optical-initial-design-agent\SKILL.md
 
 ## 推荐仓库结构
 
+```text
+optical-initial-design-agent-skill/
+  README.md
+  SKILL.md
+  ZEMAX_OPS.md
+  docs/
+    workflow.md
+    zemax_zosapi_notes.md
+  templates/
+    specs.template.json
+    candidate_audit.template.md
+    patent_prescription_audit.template.md
+    glass_substitution_report.md
+    constraint_relaxation_protocol.md
+    initial_review.template.md
+  examples/
+  scripts/
+```
+
 ## 使用流程
 
 1. 收集指标，填写 `templates/specs.template.json`。
-2. 生成检索关键词和候选搜索报告。
-3. 对每个候选填写 `templates/candidate_audit.template.md`。
-4. 对专利候选额外填写 `templates/patent_prescription_audit.template.md`。
-5. 用 ZOS-API 脚本生成 Zemax 文件。
-6. Quick Focus。
-7. 输出 spot/MTF/first-order 分析。
-8. 填写 `templates/initial_review.template.md`。
+2. 计算无量纲比例，先做 Tier 1 快速筛选。
+3. 生成检索关键词和候选搜索报告。
+4. 对每个候选填写 `templates/candidate_audit.template.md`。
+5. 对专利候选额外填写 `templates/patent_prescription_audit.template.md`。
+6. 用本地 AGF/玻璃库生成 `glass_substitution_report.md`。
+7. 如果没有严格满足的候选，按 `templates/constraint_relaxation_protocol.md` 生成放宽审查表。
+8. 用 ZOS-API 脚本生成 Zemax 文件。
+9. Quick Focus。
+10. 输出 spot/MTF/first-order 分析。
+11. 填写 `templates/initial_review.template.md`。
 
 ## 当前 MVP 经验
 
@@ -107,6 +132,8 @@ C:\Users\<you>\.codex\skills\optical-initial-design-agent\SKILL.md
 - 专利中的折叠结构不能简单展开后就宣称忠实复现。
 - 将公开处方强行打开到更快光圈后，边缘光线异常并不意外。
 - ZMX 能打开不等于结构正确，必须检查 2D layout、first-order、spot/MTF 和约束表。
+- 有目录玻璃时优先用目录玻璃，不要把可匹配材料降级成 model glass。
+- `ZEMAX_OPS.md` 记录了 ZMX 编码、GLAS 行、FIELDS、AS/FS 行和自动净口径等容易踩坑的细节。
 
 ## 后续软件 Agent 形态
 
