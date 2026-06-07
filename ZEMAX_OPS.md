@@ -28,6 +28,18 @@ GLAS ___BLANK 1 0 1.5348 55.7 0 0 0 0 0 0
 GLAS K26R 0 0 1.53504 55.7107 0 0 0 0 0 0
 ```
 
+### COMM 行
+
+```text
+COMM surface note text
+```
+
+不要用引号包裹注释（`COMM "surface note"`）。本地 Zemax 样本文件都使用不带引号的注释，带引号可能被解析器误读。
+
+### 文件结尾
+
+ZMX 文件在最后一行数据后自然结束即可，**不要**额外添加 `END` 行。本地 Zemax 样本文件以 `MOFF`（多重组态时）或最后一个 surface 行结尾，不出现独立 `END`。
+
 ### 视场和波长一致性
 
 ```text
@@ -58,6 +70,57 @@ C:\ProgramData\Zemax\ZOS-API\Libraries
 C:\ProgramData\Zemax\ZOS-API\Extensions
 C:\Program Files\Ansys Zemax OpticStudio*\ZOS-API
 ```
+
+### ZOS-API LicenseStatus Unknown recovery
+
+If `CreateNewApplication()` reports:
+
+```text
+IsValidLicenseForAPI = false
+LicenseStatus = Unknown
+Could not start OpticStudio or API license is not valid.
+```
+
+do not assume that restarting the OpticStudio GUI is enough, and do not keep reusing the same failed MCP or long-lived MATLAB session. This state often means the current API process has a stale or missing license session, even when the GUI can open normally.
+
+Use this recovery order:
+
+1. Close or discard the stale MCP / MATLAB session.
+2. Start a fresh `matlab -batch` process for the ZOS-API check or build.
+3. Set the license environment variables explicitly before the batch process starts.
+4. For standalone validation, use `CreateNewApplication()`; use `ConnectToApplication()` only when OpticStudio was already launched in an API-compatible session.
+
+PowerShell example:
+
+```powershell
+$env:ANSYSLMD_LICENSE_FILE = "1055@localhost"
+$env:ANSYSLI_SERVERS = "2325@localhost"
+matlab -batch "cd('<project-folder>'); run_zosapi_check"
+```
+
+The MATLAB initialization should still use the standard helper/root path pattern:
+
+```matlab
+NET.addAssembly(ctx.helperDll);
+success = ZOSAPI_NetHelper.ZOSAPI_Initializer.Initialize();
+if success ~= 1
+    success = ZOSAPI_NetHelper.ZOSAPI_Initializer.Initialize(ctx.zemaxRoot);
+end
+zemaxDir = char(ZOSAPI_NetHelper.ZOSAPI_Initializer.GetZemaxDirectory());
+NET.addAssembly(fullfile(zemaxDir, 'ZOSAPI.dll'));
+NET.addAssembly(fullfile(zemaxDir, 'ZOSAPI_Interfaces.dll'));
+connection = ZOSAPI.ZOSAPI_Connection();
+app = connection.CreateNewApplication();
+```
+
+Record success only after the fresh process reports a valid API license, for example:
+
+```text
+IsValidLicenseForAPI = true
+LicenseStatus = PremiumEdition
+```
+
+If the fresh batch process still fails, report only static ZMX generation, prescription audit, and first-order/paraxial checks. Do not claim Quick Focus, Spot, MTF, CRA, relative illumination, or layout verification.
 
 ### 目录玻璃优先
 
@@ -158,6 +221,7 @@ Zemax Even Asphere 常用列：
 - 专利表格可能缺行、OCR 错误、单位混淆或混用多个实施例。
 - 折叠系统展开后不等于真实机械结构，必须单独标注。
 - 原始复现、反向使用、缩放版本、优化版本要分开保存和命名。
+- **专利"视场角"通常是全视场角**，与 Zemax 半视场 `YFLN` 不同。交叉验证：`tan(half_FOV) ≈ image_semi_height / EFL`。如专利报 190° 全场，Zemax 最大半场为 95°。
 
 ## 排查清单
 
@@ -172,3 +236,9 @@ Zemax Even Asphere 常用列：
 | EFL 与来源差异大 | 缩放系数、材料匹配、传播方向或缺面错误 |
 | Spot 出不来 | 视场、光阑、净口径或边缘光线追迹失败 |
 | AGF 解析乱码 | 用错编码读取玻璃库 |
+| `IsValidLicenseForAPI = false` | 未设 `ANSYSLMD_LICENSE_FILE` / `ANSYSLI_SERVERS` 环境变量 |
+| 设了环境变量仍 license 失败 | MATLAB session 是旧的（之前失败过），需全新进程 |
+| GUI 能用但 API 不行 | GUI 有自己的 license 查找路径；API 进程需要单独配置 |
+| ZMX 加载后 surface count 不对 | 文件中有 quoted COMM 或多余 END 导致解析异常 |
+| 全场角写成半场角 | 专利"视场角"可能是全视场角，Zemax YFLN 是半视场角 |
+| license 环境正确但仍 Unknown | 检查端口号：`lmutil lmstat -a -c 1055@localhost` 验证 server 可达性 |

@@ -173,7 +173,48 @@ Generate a `glass_substitution_report.md` with one row per surface showing: surf
 
 ### 4. Convert To Zemax
 
-Use ZOS-API through MATLAB, Python, or MCP depending on the user's environment. **Before editing ZMX files or calling ZOS-API, consult `ZEMAX_OPS.md` for file format details, GLAS line conventions, and common pitfalls.**
+Use ZOS-API through MATLAB, Python, or MCP depending on the user's environment. **Before editing ZMX files or calling ZOS-API, consult `ZEMAX_OPS.md` for file format details, GLAS line conventions, common pitfalls, and the `LicenseStatus = Unknown` recovery flow.**
+
+#### 4a. ZOS-API License Preflight (Ansys/Zemax)
+
+GUI license success **does not** imply API license success. The API process needs explicit license environment variables. Before any ZOS-API call, verify:
+
+```matlab
+setenv("ANSYSLMD_LICENSE_FILE", "1055@localhost");
+setenv("ANSYSLI_SERVERS", "2325@localhost");
+```
+
+Then initialize in a **fresh** MATLAB process. Once a MATLAB/ZOS-API session has loaded with missing or wrong environment values, the .NET assemblies and license lookup are sticky — restarting OpticStudio alone does not fix it. Use a new MATLAB process after changing license variables.
+
+Checklist before editing the optical prescription:
+1. Helper DLL exists
+2. OpticStudio root exists
+3. `ZOSAPI_Initializer.Initialize()` succeeds
+4. `CreateNewApplication()` returns non-empty
+5. `IsValidLicenseForAPI == true`
+6. `LicenseStatus == PremiumEdition` (or expected edition)
+7. `LoadFile()` returns true
+8. `LDE.NumberOfSurfaces` matches expected count
+
+Record these facts before debugging the prescription. A load failure at steps 1–6 is a link-layer problem, not a prescription problem. Do not edit the ZMX to fix a license issue.
+
+**License recovery flow (in order):**
+1. Set `ANSYSLMD_LICENSE_FILE` and `ANSYSLI_SERVERS` environment variables
+2. Start a fresh MATLAB process (do NOT reuse a session that already failed)
+3. Verify with `lmutil lmstat -a -c 1055@localhost` that the license server is reachable
+4. Re-initialize ZOS-API and check `IsValidLicenseForAPI`
+5. Only after all license checks pass, proceed to load the ZMX file
+6. If API is still unavailable after all recovery steps, downgrade to static ZMX generation and paraxial/source audit. Do not imply that Quick Focus, spot, MTF, or layout verification were completed.
+
+#### 4b. Raw ZMX Generation Rules
+
+When generating ZMX files by hand (not through ZOS-API):
+
+- **Encoding:** UTF-16LE with BOM (`0xFF 0xFE`). Write with `encoding='utf-16-le'`.
+- **Comments:** Use unquoted `COMM surface note`, not `COMM "surface note"`. Quoted comments risk parse errors.
+- **No extra END:** Do not append a trailing `END` line. The file should end after the last data row (typically `MOFF` for multi-configuration systems, or after the last surface row). Local Zemax sample files end at `MOFF`, not at an explicit `END`.
+- **GLAS formula field:** `formula=0` for catalog glass, `formula=1` for model glass. Changing the glass name without changing formula from 1 to 0 leaves it as model glass.
+- **FTYP/YFLN consistency:** The field-type declaration must match the number of field values. `FTYP 0 0 3 ...` with only one `YFLN` value shows only the on-axis field.
 
 Follow these rules:
 
@@ -185,10 +226,12 @@ Follow these rules:
 - For model glass, write Nd/Vd values explicitly and note that this is not catalog glass matching.
 - For folded systems, either model coordinate breaks and mirrors explicitly or label the model as an unfolded approximation.
 - Preserve all intentional deviations from the source prescription in the report.
+- If ZOS-API reports `IsValidLicenseForAPI = false` or `LicenseStatus = Unknown`, do not keep reusing the same MCP or long-lived MATLAB session. Follow the fresh `matlab -batch` license-recovery flow in `ZEMAX_OPS.md`; only after that fails may you downgrade the run to static ZMX generation and paraxial/source audit.
 
 Field-setting rules:
 
 - If the source provides a field table, reproduce it first.
+- **Full-field vs semi-field:** Patent and datasheet "field angle" is often the full diagonal field angle. Zemax angle field entries (`YFLN`) are semi-field values. Always check: if a source says "field angle 190°", the max semi-field is 95°. If a source says "FOV 25.2°", verify whether it is half or full by cross-checking with image height and focal length (`tan(half_FOV) ≈ image_semi_height / EFL`). Record the interpretation explicitly in the report.
 - If the user gives image diameter and a tube lens is defined, set angle fields using `atan(image_semi_diameter / tube_lens_focal_length)`.
 - If the user gives finite object size, set object-height fields and document magnification assumptions.
 - If the source is an infinity-corrected objective without a tube lens, do not silently leave only the 0-degree field when the user requested an image circle. Either add a paraxial tube lens for evaluation or convert the field through the stated tube lens and label it as an evaluation field.
@@ -205,6 +248,8 @@ Infinity-objective and tube-lens rules:
 
 After building the first Zemax file:
 
+- **Save an API-validated copy first.** After static ZMX generation, open the file through ZOS-API, verify `LDE.NumberOfSurfaces` matches the expected count, and save a copy that OpticStudio itself has parsed (`Sys.SaveAs(validatedPath)`). The API-validated copy is preferred over the raw generated file when handing off to GUI checks. Static checks alone can pass while runtime loading fails.
+- **Keep file states separate.** Use distinct filenames for each stage: `project_original.zmx` (raw generated), `project_api_validated.zmx` (after API load/save), `project_focused.zmx` (after Quick Focus). Do not run Quick Focus or optimization directly on the original transcription unless a copy has already been saved.
 - Run Quick Focus or an equivalent image-plane focus step.
 - Save both the build status and the focused file.
 - Run at least one spot analysis and one MTF or first-order analysis if the license supports it.
@@ -331,6 +376,7 @@ Ask for user review before:
 
 - Treating diameter as semi-diameter.
 - Treating full image height as half image height.
+- **Treating full field angle as semi-field angle.** Patent "field angle" is often the full diagonal. Cross-check: `tan(half_FOV) ≈ image_semi_height / EFL`. Zemax `YFLN` entries are semi-field values.
 - Adding stop or field-stop rows as extra distances instead of splitting adjacent air gaps.
 - Letting Quick Focus change the cover-glass thickness.
 - Forgetting automatic semi-diameter solves, causing misleading 2D layouts.
@@ -348,6 +394,11 @@ Ask for user review before:
 - Accepting a "best match" without checking whether the glass status (preferred vs. discontinued) matters for the project.
 - Relaxing constraints without documenting what was relaxed and by how much.
 - Presenting the first compromise candidate as "the" solution instead of showing the trade-off table.
+- **Assuming GUI license success means API license success.** The API process needs `ANSYSLMD_LICENSE_FILE` and `ANSYSLI_SERVERS` environment variables set explicitly. Check `IsValidLicenseForAPI` before trusting the connection.
+- **Reusing a MATLAB/ZOS-API session that already failed license check.** .NET assemblies and license lookup are sticky after a failed initialization. Use a fresh MATLAB process after changing license variables.
+- **Editing the optical prescription to fix an API load failure.** When `LoadFile()` fails, first verify the license and API boundary (helper DLL, initializer, application creation, license status). A failure at the link layer is not a prescription problem.
+- **Generating raw ZMX with quoted COMM lines or trailing END.** Use `COMM surface note` (no quotes) and end the file after the last data row — no extra `END` marker.
+- **Trusting static ZMX checks without an API-validated copy.** Static syntax checks can pass while runtime loading fails due to environment, version differences, or syntax edge cases. Always open through ZOS-API, verify surface count, and save a validated copy.
 
 ## Relationship To Other Tools
 
