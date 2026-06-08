@@ -43,6 +43,7 @@
     "wavelengths_um": {
       "values": [],
       "weights": [],
+      "primary_index": "middle_by_default_1_based",
       "notes": ""
     },
     "chief_ray_angle_deg": {

@@ -222,7 +222,7 @@ Follow these rules:
 - Set non-stop, non-image surface semi-diameters to Automatic solve when the initial aperture data is uncertain.
 - Fix the aperture stop semi-diameter from the design F-number when appropriate.
 - Set fields consistently from the user's definition: angle, object height, image height, or image circle.
-- Use correct wavelength units and weights.
+- Use correct wavelength units and weights. If the user does not specify the primary wavelength, choose the middle entry of the wavelength list as the Zemax primary wavelength: `primary_index = ceil(number_of_wavelengths / 2)`, using Zemax's 1-based `PWAV` index. For example, `[0.486, 0.588, 0.656]` must use `PWAV 2`, not the first wavelength by default.
 - For model glass, write Nd/Vd values explicitly and note that this is not catalog glass matching.
 - For folded systems, either model coordinate breaks and mirrors explicitly or label the model as an unfolded approximation.
 - Preserve all intentional deviations from the source prescription in the report.
