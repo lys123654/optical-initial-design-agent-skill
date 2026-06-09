@@ -38,6 +38,7 @@ run_project_name.m
 - 根据用户提供的 AGF/玻璃库，将只有 `Nd/Vd` 的模型玻璃匹配到真实目录玻璃。
 - 当严格指标找不到候选时，按优先级给出可审查的约束放宽方案，而不是静默降低要求。
 - 用 MATLAB/Python/C# 的 ZOS-API 写入 Zemax LDE。
+- 可配合 `jaruiz6363/OpticStudioMCPServer` 使用 MCP 操作 Zemax，但当前 MCP 只直接支持目录玻璃名、MaterialSubstitute、MaterialOffset；模型玻璃 `Nd/Vd` 需走 MATLAB/Python ZOS-API 或 raw ZMX fallback。
 - 加入保护玻璃、波长、视场、光阑、自动净口径。
 - 执行 Quick Focus。
 - 输出 spot、MTF、first-order 等初步分析。
@@ -133,6 +134,7 @@ optical-initial-design-agent-skill/
 - 将公开处方强行打开到更快光圈后，边缘光线异常并不意外。
 - ZMX 能打开不等于结构正确，必须检查 2D layout、first-order、spot/MTF 和约束表。
 - 有目录玻璃时优先用目录玻璃，不要把可匹配材料降级成 model glass。
+- 使用 MCP 时不要假设能设置 model glass 的 `Nd/Vd`。先确认 tool 是否暴露 `MaterialModel`；`jaruiz6363/OpticStudioMCPServer` 当前未暴露。
 - `ZEMAX_OPS.md` 记录了 ZMX 编码、GLAS 行、FIELDS、AS/FS 行和自动净口径等容易踩坑的细节。
 
 ## 后续软件 Agent 形态

@@ -138,6 +138,22 @@ surface.MaterialCell.SetSolveData(solver);
 
 有可用 AGF 匹配时，优先使用目录玻璃。模型玻璃会削弱后续色差、材料可得性和优化结果的可信度。
 
+### MCP 设置材料的限制
+
+本 workflow 使用或参考的 Zemax MCP 仓库：
+
+```text
+https://github.com/jaruiz6363/OpticStudioMCPServer
+```
+
+当前公开实现中：
+
+- `zemax_set_surface` 通过 `surface.Material = material` 设置目录玻璃名。
+- `zemax_set_surface_solve` 支持 `MaterialSubstitute` 和 `MaterialOffset`。
+- 没有暴露 `MaterialModel` solve 的 `IndexNd` / `AbbeVd` 参数。
+
+因此，连接 MCP 后可以设置目录玻璃名，也可以做 MaterialSubstitute / MaterialOffset；但不要假设 MCP 能直接设置模型玻璃 `Nd/Vd`。如果必须用模型玻璃，应改用 MATLAB/Python ZOS-API，或在 raw ZMX 中写 `GLAS <name> 1 0 <Nd> <Vd> ...`。
+
 ### 半口径
 
 ```matlab
@@ -230,6 +246,7 @@ Zemax Even Asphere 常用列：
 |---|---|
 | ZMX 打不开 | 编码不是 UTF-16LE，或关键头部/行格式损坏 |
 | 材料显示为模型玻璃 | `GLAS` 行 `formula=1`，或目录未加载 |
+| MCP 不能设置模型玻璃 Nd/Vd | 当前 `jaruiz6363/OpticStudioMCPServer` 未暴露 `MaterialModel` 的 `IndexNd` / `AbbeVd` 参数 |
 | 只有轴上视场 | `FTYP` 声明数与 `YFLN/FWGN` 数量不一致 |
 | 2D layout 镜片巨大或交叉 | 口径用了直径而非半口径，或厚度符号错误 |
 | 保护玻璃厚度被改 | 单面建模，Quick Focus 改了玻璃厚度 |

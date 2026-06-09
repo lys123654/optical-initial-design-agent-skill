@@ -175,7 +175,28 @@ Generate a `glass_substitution_report.md` with one row per surface showing: surf
 
 Use ZOS-API through MATLAB, Python, or MCP depending on the user's environment. **Before editing ZMX files or calling ZOS-API, consult `ZEMAX_OPS.md` for file format details, GLAS line conventions, common pitfalls, and the `LicenseStatus = Unknown` recovery flow.**
 
-#### 4a. ZOS-API License Preflight (Ansys/Zemax)
+#### 4a. MCP Capability Check
+
+The known Zemax MCP used in this workflow is:
+
+```text
+https://github.com/jaruiz6363/OpticStudioMCPServer
+```
+
+Before relying on MCP for material setup, check the active MCP tool schema or source implementation. In the current `jaruiz6363/OpticStudioMCPServer` implementation:
+
+- `zemax_set_surface` sets a catalog/material name through `surface.Material = material`.
+- `zemax_set_surface_solve` supports material solves for `MaterialSubstitute` and `MaterialOffset`.
+- It does **not** expose a `MaterialModel` solve with `IndexNd` / `AbbeVd` parameters.
+
+Therefore:
+
+- Use MCP for catalog glass names, material catalog operations, MaterialSubstitute, and MaterialOffset.
+- Do not assume MCP can directly set model glass `Nd/Vd`.
+- If model glass is required, use MATLAB/Python ZOS-API or raw ZMX generation as fallback.
+- Document the fallback path in the review report.
+
+#### 4b. ZOS-API License Preflight (Ansys/Zemax)
 
 GUI license success **does not** imply API license success. The API process needs explicit license environment variables. Before any ZOS-API call, verify:
 
@@ -206,7 +227,7 @@ Record these facts before debugging the prescription. A load failure at steps 1â
 5. Only after all license checks pass, proceed to load the ZMX file
 6. If API is still unavailable after all recovery steps, downgrade to static ZMX generation and paraxial/source audit. Do not imply that Quick Focus, spot, MTF, or layout verification were completed.
 
-#### 4b. Raw ZMX Generation Rules
+#### 4c. Raw ZMX Generation Rules
 
 When generating ZMX files by hand (not through ZOS-API):
 
@@ -214,6 +235,7 @@ When generating ZMX files by hand (not through ZOS-API):
 - **Comments:** Use unquoted `COMM surface note`, not `COMM "surface note"`. Quoted comments risk parse errors.
 - **No extra END:** Do not append a trailing `END` line. The file should end after the last data row (typically `MOFF` for multi-configuration systems, or after the last surface row). Local Zemax sample files end at `MOFF`, not at an explicit `END`.
 - **GLAS formula field:** `formula=0` for catalog glass, `formula=1` for model glass. Changing the glass name without changing formula from 1 to 0 leaves it as model glass.
+- **MCP limitation:** If using `jaruiz6363/OpticStudioMCPServer`, do not try to create model glass through MCP unless the active tool schema explicitly exposes `MaterialModel`, `IndexNd`, and `AbbeVd`. The current public implementation only exposes catalog material names plus `MaterialSubstitute` / `MaterialOffset` solves.
 - **FTYP/YFLN consistency:** The field-type declaration must match the number of field values. `FTYP 0 0 3 ...` with only one `YFLN` value shows only the on-axis field.
 
 Follow these rules:
@@ -390,6 +412,7 @@ Ask for user review before:
 - Trusting patent prose when a simple ratio check contradicts the prescription table.
 - Combining original reproduction, reverse-use interpretation, scaling, and optimization into one file without labels.
 - Using model glass when a good catalog match exists within distance <0.05.
+- Assuming MCP can set model glass `Nd/Vd`. For `jaruiz6363/OpticStudioMCPServer`, use MCP for catalog glass names, MaterialSubstitute, and MaterialOffset; use MATLAB/Python ZOS-API or raw ZMX for model glass.
 - Matching glass by Nd only, ignoring Vd â€” this breaks chromatic correction.
 - Accepting a "best match" without checking whether the glass status (preferred vs. discontinued) matters for the project.
 - Relaxing constraints without documenting what was relaxed and by how much.
@@ -403,3 +426,5 @@ Ask for user review before:
 ## Relationship To Other Tools
 
 General Zemax guidance skills can help with optimization, analysis selection, and tolerancing. They do not replace the source-search, patent-audit, and prescription-to-Zemax workflow in this skill.
+
+The workflow can use `jaruiz6363/OpticStudioMCPServer` as a Zemax MCP bridge, but the skill must treat MCP capabilities as version-specific. Confirm the tool schema before using material solves. At the time this note was added, that MCP did not expose direct `MaterialModel` setup for `IndexNd` / `AbbeVd`.
